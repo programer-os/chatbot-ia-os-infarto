@@ -1,0 +1,209 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI BIUS Web Chatbot</title>
+  <style>
+    body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: #1e1e1e;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.chat-container {
+  width: 100%;
+  max-width: 700px;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #00ffd0;
+  margin-bottom: 10px;
+}
+
+.chat-box {
+  background: #2e2e2e;
+  padding: 20px;
+  border-radius: 10px;
+  height: 500px;
+  overflow-y: auto;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.message {
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.user {
+  text-align: right;
+  color: #00ffd0;
+}
+
+.bot {
+  text-align: left;
+  color: #eee;
+}
+
+pre {
+  background: #111;
+  padding: 10px;
+  border-radius: 6px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #0f0;
+  margin-top: 10px;
+}
+
+.input-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+textarea {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: #2e2e2e;
+  color: #fff;
+  font-size: 16px;
+  resize: none;
+  height: 60px;
+}
+
+button {
+  background: #00ffd0;
+  border: none;
+  border-radius: 8px;
+  padding: 0 20px;
+  font-size: 24px;
+  color: #000;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #00c9a7;
+}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="chat-container">
+    <h1>💬  Bot</h1>
+    <div id="chatBox" class="chat-box"></div>
+    
+    <div class="input-group">
+      <textarea id="userInput" placeholder="Ask anything"></textarea>
+      <button onclick="sendMessage()">➤</button>
+      <button onclick="startVoice()">🎙️</button>
+    </div>
+  </div>
+  
+  <!-- JSZip & FileSaver for optional zip download later -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  
+  <script>
+    
+
+
+      
+      const API_KEY = "AIzaSyDSIy5m7mTXlMMR_OOdCu2Af_EwoCd124w"; // Replace with your Gemini API Key
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+
+const chatBox = document.getElementById("chatBox");
+
+function sendMessage() {
+  const input = document.getElementById("userInput");
+  const userText = input.value.trim();
+  if (!userText) return;
+  
+  addMessage("user", userText);
+  input.value = "";
+  getBotResponse(userText);
+}
+
+function addMessage(sender, text) {
+  const msg = document.createElement("div");
+  msg.className = `message ${sender}`;
+  
+  if (sender === "bot" && text.includes("```")) {
+    const parsed = parseCode(text);
+    msg.innerHTML = parsed;
+  } else {
+    msg.innerText = text;
+  }
+  
+  chatBox.appendChild(msg);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function parseCode(text) {
+  return text.replace(/```(\w+)?([\s\S]*?)```/g, (_, lang, code) => {
+    return `<pre><code>${escapeHtml(code.trim())}</code></pre>`;
+  });
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+async function getBotResponse(prompt) {
+  const thinking = document.createElement("div");
+  thinking.className = "message bot";
+  thinking.innerText = "Typing...";
+  chatBox.appendChild(thinking);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    
+    const data = await res.json();
+    const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "❌ No response.";
+    thinking.remove();
+    addMessage("bot", aiText);
+  } catch (err) {
+    thinking.remove();
+    addMessage("bot", "⚠️ Error getting response.");
+  }
+}
+
+// Voice input
+function startVoice() {
+  const recognition = new(window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "en-US";
+  recognition.start();
+  recognition.onresult = (event) => {
+    document.getElementById("userInput").value = event.results[0][0].transcript;
+  };
+  recognition.onerror = (event) => {
+    alert("Voice input error: " + event.error);
+  };
+}  
+
+  </script>
+
+</body>
+
+</html>
